@@ -7,7 +7,9 @@ package org.bd2kccc.bd2kcccpubmed;
 
 import com.github.kevinsawicki.http.HttpRequest;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import static org.apache.commons.lang3.StringEscapeUtils.unescapeHtml4;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -17,8 +19,8 @@ import org.json.JSONObject;
  */
 public class Crawler {
     
-    public static final String[] BD2K_GRANTS = { "EB020406", "HG007990", "HG008540", "AI117925", "AI117924", "EB020403", "GM114833", "GM114838", "HL127624", "HL127366", "EB020404", "EB020405", "HG007963"};
-    public static final String[] BD2K_CENTERS = { "BDDS", "BDTG", "CCD", "CEDAR", "CPCP", "ENIGMA", "HeartBD2K", "KnowEnG", "LINCS-DCIC", "LINCS-TG", "MD2K", "Mobilize", "PIC-SURE" };
+    public static final String[] BD2K_GRANTS = { "GM114833", "EB020406", "HG007990", "HG008540", "AI117925", "AI117924", "EB020403", "GM114838", "HL127624", "HL127366", "EB020404", "EB020405", "HG007963"};
+    public static final String[] BD2K_CENTERS = { "HeartBD2K", "BDDS", "BDTG", "CCD", "CEDAR", "CPCP", "ENIGMA", "KnowEnG", "LINCS-DCIC", "LINCS-TG", "MD2K", "Mobilize", "PIC-SURE" };
     
     //ignoring bioCADDE, U24 grant AI117966
     
@@ -73,6 +75,9 @@ public class Crawler {
             publication.pmid = pmids[i];
             publication.centers = publications.get(pmids[i]);
             publication.name = pub.optString("title", "NO_TITLE");
+            //remove &lt;i&gt; and &lt;/i&gt;
+            //replace &amp;amp; with &
+            publication.name = unescapeHtml4(publication.name);
             publication.date = pub.optString("sortpubdate", "1066/01/01 00:00").substring(0, 10);
             publication.date = publication.date.replaceAll("/", "-");
             
@@ -98,6 +103,8 @@ public class Crawler {
             publicationStructs.add(publication);
         }
         
+        Collections.sort(publicationStructs);
+        
         JSONArray outputData = new JSONArray();
         
         for(Publication p : publicationStructs) {
@@ -117,7 +124,7 @@ public class Crawler {
     
 }
 
-class Publication {
+class Publication implements Comparable {
     int pmid;
     ArrayList<String> centers;
     
@@ -173,5 +180,10 @@ class Publication {
     @Override
     public String toString() {
         return getDescription();
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        return date.compareTo(((Publication)o).date);
     }
 }
