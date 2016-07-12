@@ -105,6 +105,11 @@ public class Crawler {
         
         Collections.sort(publicationStructs);
         
+        for(Publication p : publicationStructs) {
+            if(p.isTool())
+                System.out.println(p.name);
+        }
+        
         JSONArray outputData = new JSONArray();
         
         for(Publication p : publicationStructs) {
@@ -134,11 +139,15 @@ class Publication implements Comparable {
     String citation;
     ArrayList<String> authors;
     
+    public static final int UPPERCASE = 1, LOWERCASE = 2, TITLECASE = 3, MIXEDCASE = 4;
+    
     String getName() {
         return name;
     }
     
     String getType() {
+        if(isTool())
+            return "Publications, Tools";
         return "Publications";
     }
     
@@ -157,6 +166,185 @@ class Publication implements Comparable {
     
     String getInitiative() {
         return "";
+    }
+    
+    
+    
+    //algorithm app server tool platform database interface knowledgebase framework visualization data program programming
+    
+    //test bioinformatics, nature methods, computational biology, nature biotechnology
+    
+    //abstract features:
+    //keywords in abstract
+    //presence of url
+    //presense of github/sourceforge/bitbucket url
+    @Deprecated
+    int getSentenceCase(String sentence) {
+        String[] words = sentence.split("[- ,]+");//split by hyphens, spaces, and commas
+        boolean uppercase = true;
+        boolean lowercase = true;
+        boolean titlecase = true;
+        boolean mixedcase = true;
+        for(String word : words) {
+            int wcase = getCase(word);
+            if(wcase == MIXEDCASE)
+                return MIXEDCASE;
+            if(wcase == UPPERCASE && word.length() > 1)
+                return UPPERCASE;
+        }
+        
+        if(uppercase)
+            return UPPERCASE;
+        if(lowercase)
+            return LOWERCASE;
+        if(titlecase)
+            return TITLECASE;
+        if(mixedcase)
+            return MIXEDCASE;
+        
+        return 0;
+    }
+    
+    int getCase(String word) {
+        
+        if(word.isEmpty())
+            return 0;
+        
+        boolean uppercase = true;
+        boolean lowercase = true;
+        boolean titlecase = true;
+        boolean mixedcase = true;
+        char[] letters = word.toCharArray();
+
+        if(Character.isLetter(letters[0])) {
+            if(Character.isLowerCase(letters[0])){
+                //titlecase = false;
+                //let's not require every word to be titlecase
+            }
+        } else {
+            uppercase = false;
+            lowercase = false;
+            titlecase = false;
+        }
+
+        for(int i = 1; i < letters.length; i++) {
+            char letter = letters[i];
+            
+            
+
+            if(!Character.isLetter(letter)) {
+                uppercase = false;
+                lowercase = false;
+                titlecase = false;
+                break;
+            }
+
+            if(Character.isLowerCase(letter))
+                uppercase = false;
+            else {
+                lowercase = false;
+                titlecase = false;
+            }
+        }
+        
+        if(uppercase && word.length() > 1)
+            return UPPERCASE;
+        if(lowercase)
+            return LOWERCASE;
+        if(titlecase)
+            return TITLECASE;
+        if(mixedcase)
+            return MIXEDCASE;
+        
+        return 0;
+    }
+    
+    boolean isGene(String word) {
+        
+        if(true)return false;
+        //this threshold varies quite a lot, from < 1 to > 400
+        double similarityThreshod = 1;
+        
+        String mygeneUrl = "http://mygene.info/v2/query?q=";
+        HttpRequest request = HttpRequest.get(mygeneUrl + word);
+        JSONObject requestJson = new JSONObject(request.body());
+        double geneSimilarity = requestJson.optDouble("max_score", 0);
+        
+        return geneSimilarity > similarityThreshod;
+    }
+    
+    //consider any single word left of colon that isn't a gene
+    //if it's uppercase or mixed case, count it
+    
+    boolean isTool() {
+        //title features:
+        //number of words in in title
+        int wordsInTitle = 0;
+        //number of words left of colon
+        int wordsLeftOfColon = 0;
+        //number of words in mixedcase (excluding genes)
+        int mixedCase = 0;
+        //number of words in uppercase (excluding genes)
+        int upperCase = 0;
+        //number of words in mixedcase left of colon (excluding genes)
+        int mixedCaseLeftOfColon = 0;
+        //number of words in uppercase left of colon (excluding genes)
+        int upperCaseLeftOfColon = 0;
+        
+        //keywords in title
+        
+        String title = name;
+        String firstHalf = title.split(": ")[0];
+        for(String word : firstHalf.split("[-.,] |[, ]")) {
+            
+            //temporary measure
+            if(word.equals("Brainhack"))
+                return false;
+            
+            wordsInTitle++;
+            wordsLeftOfColon++;
+            if(getCase(word) == MIXEDCASE) {
+                System.out.println("mixed: " + word);
+                if(isGene(word))
+                    continue;
+                mixedCase++;
+                mixedCaseLeftOfColon++;
+            }
+            if(getCase(word) == UPPERCASE) {
+                System.out.println("upper: " + word);
+                if(isGene(word))
+                    continue;
+                upperCase++;
+                upperCaseLeftOfColon++;
+            }
+        }
+        
+        try{
+        String secondHalf = title.split(": ")[1];
+        for(String word : secondHalf.split("[-.,] |[, ]")) {
+            wordsInTitle++;
+            if(getCase(word) == MIXEDCASE) {
+                System.out.println("mixed: " + word);
+                if(isGene(word))
+                    continue;
+                mixedCase++;
+            }
+            if(getCase(word) == UPPERCASE) {
+                System.out.println("upper: " + word);
+                if(isGene(word))
+                    continue;
+                upperCase++;
+            }
+        }
+        }catch(Exception e){}
+        
+        if(wordsLeftOfColon == 0)
+            return false;
+        if(wordsLeftOfColon > 1)
+            return false;
+        
+
+        return true;
     }
     
     String getDescription() {
